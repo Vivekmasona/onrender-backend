@@ -1,28 +1,24 @@
-from flask import Flask, request, send_file
-import youtube_dl
+from flask import Flask, request, render_template
+from pytube import YouTube
+import os
 
 app = Flask(__name__)
 
-@app.route('/audio', methods=['POST'])
-def download_audio():
-    url = request.form.get('url')
 
-    if not url:
-        return "Please provide a valid URL."
-
-    ydl_opts = {
-        'format': 'bestaudio/best',
-        'extractaudio': True,
-        'audioformat': 'mp3',
-        'outtmpl': 'downloads/%(title)s.%(ext)s',  # Save the file with its title
-    }
-
-    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(url, download=True)
-        filename = ydl.prepare_filename(info)
-
-    return send_file(filename, as_attachment=True)
+@app.route('/download', methods=['POST'])
+def download():
+    url = request.form['url']
+    yt = YouTube(url)
+    
+    # Get the title and size of the video
+    title = yt.title
+    size = yt.streams.get_audio_only().filesize
+    
+    # Download the audio
+    audio_stream = yt.streams.filter(only_audio=True).first()
+    audio_stream.download(output_path='downloads', filename='audio')
+    
+    return f'Title: {title}<br>Size: {size} bytes<br><a href="/downloads/audio.mp4" download>Download Audio</a>'
 
 if __name__ == '__main__':
     app.run(debug=True)
-  
